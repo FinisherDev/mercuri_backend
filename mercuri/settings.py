@@ -30,7 +30,7 @@ AGORA_APP_CERTIFICATE = "9d75c98e945a4a6f8fdd94d40ca0fba8"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['10.10.30.187', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['*']#'10.10.30.187', '127.0.0.1', 'localhost']
 
 
 # Application definition

@@ -4,6 +4,10 @@ from django.contrib.auth.password_validation import validate_password
 
 from .models import CustomUser
 
+ROLE_CHOICES = [
+    ('customer', 'Customer'),
+    ('driver', 'Driver'),
+]
 
 class CustomUserSerializer(serializers.ModelSerializer):
     """
@@ -32,13 +36,15 @@ class CustomUserLoginSerializer(serializers.Serializer):
     """
     email = serializers.CharField()
     password = serializers.CharField(write_only=True)
-    role = serializers.BooleanField(required= True)
+    role = serializers.ChoiceField(choices=ROLE_CHOICES)
 
     def validate(self, data):
         user = authenticate(**data)
-        if user and user.is_active:
-            return user
-        raise serializers.ValidationError('Incorrect Credentials')
+        if data['role'] == user.role:
+            if user and user.is_active:
+                return user
+            raise serializers.ValidationError('Incorrect Credentials')
+        raise serializers.ValidationError('Role mismatch')
 
 
 #class ProfileSerializer(CustomUserSerializer):
