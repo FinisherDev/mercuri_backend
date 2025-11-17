@@ -5,6 +5,16 @@ from math import radians, cos, sin, asin, sqrt
 
 # Create your models here.
 
+PACKAGE_CATEGORIES = [
+  ("electronics", "Electronics"),
+  ("documents", "Documents"),
+  ("clothing", "Clothing"),
+  ("food_&_beverages", "Food & Beverages"),
+  ("fragile_items", "Fragile Items"),
+  ("books", "Books"),
+  ("other", "Other"),
+];
+
 User = get_user_model()
 
 class Driver(models.Model):
@@ -24,6 +34,7 @@ class Order(models.Model):
         ('declined', 'Declined')
     ])
     item_type = models.CharField(max_length=10)
+    item_category = models.CharField(max_length=50, choices=PACKAGE_CATEGORIES, default='other')
     item_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pickup_latitude = models.FloatField()
     pickup_longitude = models.FloatField()

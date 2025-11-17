@@ -30,7 +30,7 @@ AGORA_APP_CERTIFICATE = "9d75c98e945a4a6f8fdd94d40ca0fba8"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['10.10.30.187', '127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -101,12 +101,14 @@ CHANNEL_LAYERS = {
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mercuri_data', 
-        'USER': 'matrix',
-        'PASSWORD': 'M@z3runn3r_',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        #'ENGINE': 'django.db.backends.postgresql',
+        #'NAME': 'mercuri_data', 
+        #'USER': 'matrix',
+        #'PASSWORD': 'M@z3runn3r_',
+        #'HOST': 'localhost',
+        #'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3'
     }
 }
 
