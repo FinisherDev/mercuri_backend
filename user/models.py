@@ -1,7 +1,10 @@
+import uuid
+
 from django.db import models
 from django.db.models import Index
 from django.conf import settings
 from django.utils import timezone
+from django.core.mail import send_mail
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
 
@@ -9,7 +12,7 @@ from .managers import CustomUserManager
 
 ROLE_CHOICES = [
     ('customer', 'Customer'),
-    ('driver', 'Driver'),
+    ('rider', 'Rider'),
 ]
 BANK_LIST = [
     ('access', 'Access Bank'),
@@ -31,6 +34,7 @@ BANK_LIST = [
 # Create your models here.
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_('email address'), unique=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='customer')
     phone_number = models.CharField(max_length=11)
@@ -64,8 +68,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         super().clean()
         self.email = self.__class__.objects.normalize_email(self.email)
 
-    def is_driver(self):
-        return self.role == 'driver'
+    def is_rider(self):
+        return self.role == 'rider'
 
     def is_customer(self):
         return self.role == 'customer'
@@ -91,6 +95,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         ]
         
 class CustomerProfile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to='avatar', blank=True)
@@ -99,7 +104,8 @@ class CustomerProfile(models.Model):
     def __str__(self):
         return self.user.first_name
 
-class DriverProfile(models.Model):
+class RiderProfile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     middle_name = models.CharField("middle name", max_length=150, blank=True)

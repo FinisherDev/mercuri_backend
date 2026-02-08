@@ -23,5 +23,5 @@ urlpatterns = [
     path('api/wallet/', include('wallet.urls')),
     path('api/delivery/', include('delivery.urls')),
     path('api/notifications/', include('notifications.urls')),
-    path('api/calls/', include('communication.urls')),
+    path('api/', include('communication.urls')),
 ]

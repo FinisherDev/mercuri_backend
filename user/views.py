@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model, login, logout
 from django.shortcuts import get_object_or_404
 
 
-from . import serializers
+from . import serializers, models
 
 # Create your views here.
 
@@ -54,6 +54,7 @@ class CustomUserLoginAPIView(GenericAPIView):
             'refresh': str(token),
             'access': str(token.access_token)
         }
+        print(f"Access Token {token.access_token}")
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -84,28 +85,28 @@ class CustomUserAPIView(RetrieveUpdateAPIView):
         return self.request.user
 
 
-#class UserProfileAPIView(RetrieveUpdateAPIView):
+class CustomerProfileAPIView(RetrieveUpdateAPIView):
     """
     Get, Update user profile
     """
-    #queryset = Profile.objects.all()
-    #serializer_class = serializers.ProfileSerializer
-    #permission_classes = (IsAuthenticated,)
+    queryset = models.CustomerProfile.objects.all()
+    serializer_class = serializers.CustomerProfileSerializer
+    permission_classes = (IsAuthenticated,)
 
-    #def get_object(self):
-    #    return self.request.user.profile
+    def get_object(self):
+        return self.request.user.profile
 
 
-#class UserAvatarAPIView(RetrieveUpdateAPIView):
+class RiderProfileAPIView(RetrieveUpdateAPIView):
     """
     Get, Update user avatar
     """
-    #queryset = Profile.objects.all()
-    #serializer_class = serializers.ProfileAvatarSerializer
-    #permission_classes = (IsAuthenticated,)
+    queryset = models.RiderProfile.objects.all()
+    serializer_class = serializers.RiderProfileSerializer
+    permission_classes = (IsAuthenticated,)
 
-    #def get_object(self):
-    #    return self.request.user.profile
+    def get_object(self):
+        return self.request.user.profile
 
 
 class PasswordChangeAPIView(UpdateAPIView):

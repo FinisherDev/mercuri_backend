@@ -174,4 +174,4 @@ cython_debug/
 .pypirc
 
 #Firebase
-mercuri-notifications-firebase-adminsdk-fbsvc-64012e9c55.json
+firebase_config.json

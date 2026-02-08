@@ -1,13 +1,19 @@
 import requests
+from decimal import Decimal
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
+from rest_framework import status, viewsets, serializers
+from rest_framework.decorators import action
+
 from django.db import transaction
 from django.conf import settings
 from django.contrib.auth.models import User
-from .models import Wallet, Transaction
-from .serializers import TransactionSerializer
+
+from .models import Wallet, Transaction, WithdrawalRequest
+from .serializers import TransactionSerializer, WithdrawalRequestSerializer
+from .tasks import process_withdrawal
 
 # Create your views here.
 
@@ -42,7 +48,7 @@ class WalletView(APIView):
         """Send payment request to Flutterwave API."""
         url = "https://api.flutterwave.com/v3/payments"
         headers = {
-            "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
+            "Authorization": f"Bearer {settings.SECRET_KEY}",
             "Content-Type": "application/json",
         }
         data = {
@@ -89,6 +95,8 @@ class TransferFundsView(APIView):
                 if sender_wallet.transfer(amount, recipient_wallet):
                     Transaction.objects.create(wallet=sender_wallet, transaction_type='debit', transaction_format= 'transfer', amount=amount, description=f"Transferred to {recipient_wallet.user}")
                     Transaction.objects.create(wallet=recipient_wallet, transaction_type='credit', transaction_format= 'transfer', amount=amount, description=f"Recieved from {sender}")
+                else:
+                    return Response({"error": "Insufficient Funds"})    
             return Response({"message": "Transfer Successful"}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Invalid data"}, status=status.HTTP_400_BAD_REQUEST)
@@ -150,10 +158,51 @@ class FlutterwaveCallbackView(APIView):
                         transaction_format= 'deposit',
                         #status = 'success',
                         amount = result["data"]["amount"], 
-                        description=f"{result["data"]["amount"]} deposited by {email}"
+                        description=f"{result['data']['amount']} deposited by {email}"
                         )
                 return Response({"message": "Deposit Successful"}, status=status.HTTP_200_OK)
             except Wallet.DoesNotExist:
                 return Response({"error": "Wallet not found"}, status=status.HTTP_404_NOT_FOUND)
         else:
             return Response({"error": "Payment failed"}, status=status.HTTP_400_BAD_REQUEST)
+        
+class WithdrawalViewset(viewsets.ModelViewSet):
+    serializer_class = WithdrawalRequestSerializer
+    permission_classes = (IsAuthenticated, )
+
+    def get_queryset(self):
+        wallet = Wallet.objects.get(user = self.request.user)
+        return WithdrawalRequest.objects.filter(wallet = wallet).order_by("-created_at")
+    
+    def perform_create(self, serializer):
+        wallet = Wallet.objects.select_for_update().get(user = self.request.user)
+        amount = self.request.data["amount"]
+        
+        if wallet.balance < amount:
+            raise serializers.ValidationError({"detail": "Insufficient Funds"})
+        
+        with transaction.atomic():
+            wallet.balance -= Decimal(amount)
+            wallet.save()
+            tx = Transaction.objects.create(wallet = wallet, amount = amount, transaction_format = "reserve")
+
+            withdrawal = serializer.save(wallet = wallet)
+            process_withdrawal.delay(str(withdrawal.id))
+
+    @action(detail = True, methods = ['POST'])
+    def cancel(self, request, pk=None):
+        withdrawal = self.get_object()
+        if withdrawal.status != 'pending':
+            return Response({"detail": "Cannot cancel"}, status = status.HTTP_400_BAD_REQUEST)
+        
+        with transaction.atomic():
+            wallet = withdrawal.wallet
+            wallet.balance += withdrawal.amount
+            wallet.save()
+
+            Transaction.objects.create(wallet = wallet, amount = withdrawal.amount, transaction_format = 'release')
+            withdrawal.status = 'failed'
+            withdrawal.faliure_reason = "Cancellation initiated by user"
+            withdrawal.save()
+
+        return Response({"detail": "Cancelled"})

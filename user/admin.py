@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
 from .forms import CustomUserCreationForm, CustomUserChangeForm
-from .models import CustomUser, CustomerProfile, DriverProfile
+from .models import CustomUser, CustomerProfile, RiderProfile
 
 # Register your models here.
 
@@ -32,4 +32,4 @@ class CustomUserAdmin(UserAdmin):
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(CustomerProfile)
-admin.site.register(DriverProfile)
+admin.site.register(RiderProfile)

@@ -1,0 +1,62 @@
+services:
+  # Web Service (Django + Channels)
+  - type: web
+    name: django-web
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: daphne -b 0.0.0.0 -p $PORT mercuri.asgi:application
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: DATABASE_URL
+        fromDatabase:
+          name: postgres-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: redis-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+  # Celery Worker
+  - type: worker
+    name: celery-worker
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A mercuri worker --loglevel=info
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: postgres-db
+          property: connectionString
+      - key: REDIS_URL
+        fromDatabase:
+          name: redis-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+databases:
+  # PostgreSQL
+  - name: postgres-db
+    databaseName: mercuri_data
+    user: matrix
+    region: oregon
+    plan: free
+
+  # Redis
+  - name: redis-db
+    region: oregon
+    plan: free
+    maxmemoryPolicy: noeviction

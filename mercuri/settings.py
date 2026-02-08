@@ -10,8 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
+import firebase_admin
+import dj_database_url
+from decouple import config
 from pathlib import Path
 from datetime import timedelta
+from firebase_admin import credentials
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,14 +26,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%5dt3x&=2m!e)_x%03acdpbxvvg_&8zjvvdb#4ake&k_umx*98'
-FLUTTERWAVE_SECRET_KEY = 'FLWSECK_TEST-0a478ce5bc6490a7730bf11aca48764c-X'
-FIREBASE_CREDENTIALS = BASE_DIR / 'mercuri-notifications-firebase-adminsdk-fbsvc-64012e9c55'
+SECRET_KEY = config('SECRET_KEY')
+FIREBASE_CREDENTIALS = os.path.join(BASE_DIR, 'firebase_config.json')
+
+cred = credentials.Certificate(FIREBASE_CREDENTIALS)
+firebase_admin.initialize_app(cred)
+
+FCM_DJANGO_SETTINGS = {
+    "ONE_DEVICE_PER_USER": False,
+    "DELETE_INACTIVE_DEVICES": True,
+}
+
 AGORA_APP_ID = "184507095fee47d880e282b490463620"
 AGORA_APP_CERTIFICATE = "9d75c98e945a4a6f8fdd94d40ca0fba8"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG')
 
 ALLOWED_HOSTS = ['*']#'10.10.30.187', '127.0.0.1', 'localhost']
 
@@ -55,6 +68,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -86,11 +100,12 @@ WSGI_APPLICATION = 'mercuri.wsgi.application'
 
 ASGI_APPLICATION = 'mercuri.asgi.application'
 
+redis_url = config('REDIS_URL', default='redis://127.0.0.1:6379')
 CHANNEL_LAYERS = {
     'default' : {
         'BACKEND' : 'channels_redis.core.RedisChannelLayer',
         'CONFIG' : {
-            'hosts' : [('127.0.0.1', 6379)],
+            'hosts' : [(redis_url + '/1')],
         },
     },
 }
@@ -99,18 +114,23 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        #'ENGINE': 'django.db.backends.postgresql',
-        #'NAME': 'mercuri_data', 
-        #'USER': 'matrix',
-        #'PASSWORD': 'M@z3runn3r_',
-        #'HOST': 'localhost',
-        #'PORT': '5432',
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3'
+database_url = config('DATABASE_URL', default=None)
+
+if database_url:
+    DATABASES = {
+        'default' : dj_database_url.parse(database_url)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'), 
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASS'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT'),
+        }
+    }
 
 
 # Password validation
@@ -149,6 +169,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
@@ -163,12 +187,19 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME' : timedelta(minutes=720),
     'REFRESH_TOKEN_LIFETIME' : timedelta(days=7),
     'ROTATE_REFRESH_TOKENS' : True,
     'BLACKLIST_AFTER_ROTATION' : True,
 }
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = redis_url + '/0'
+CELERY_RESULT_BACKEND = redis_url + '/0'
 CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_BEAT_SCHEDULE = {
+    "expire_offers_every_10_seconds": {
+        "task": "delivery.tasks.expire_old_offers",
+        "schedule": 10,
+    }
+}

@@ -2,11 +2,11 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 
-from .models import CustomUser
+from .models import CustomUser, CustomerProfile, RiderProfile
 
 ROLE_CHOICES = [
     ('customer', 'Customer'),
-    ('driver', 'Driver'),
+    ('rider', 'Rider'),
 ]
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -15,7 +15,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = CustomUser
-        fields = ('id', 'email', 'first_name', 'phone_number')
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone_number', 'role')
 
 class CustomUserRegisterationSerializer(serializers.ModelSerializer):
     """
@@ -23,7 +23,7 @@ class CustomUserRegisterationSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = CustomUser
-        fields = ('id', 'email', 'phone_number', 'password', 'role')
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone_number', 'password', 'role')
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -47,22 +47,22 @@ class CustomUserLoginSerializer(serializers.Serializer):
         raise serializers.ValidationError('Role mismatch')
 
 
-#class ProfileSerializer(CustomUserSerializer):
+class CustomerProfileSerializer(CustomUserSerializer):
     """
     Serializer class to serialize the user Profile model
     """
-#    class Meta:
-#        model = Profile
- #       fields = ('bio')
+    class Meta:
+        model = CustomerProfile
+        fields = ('bio',)
 
 
-#class ProfileAvatarSerializer(serializers.ModelSerializer):
+class RiderProfileSerializer(CustomUserSerializer):
     """
     Serializer class to serialize the avatar
     """
-#    class Meta:
-#        model = Profile
-#        fields = ('avatar',)
+    class Meta:
+        model = RiderProfile
+        fields = ('bio',)
 
 
 class PasswordChangeSerializer(serializers.Serializer):

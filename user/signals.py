@@ -7,7 +7,7 @@ from django.dispatch import receiver
 
 #from django_rest_passwordreset.signals import reset_password_token_created
 
-from .models import CustomerProfile, DriverProfile
+from .models import CustomerProfile, RiderProfile
 
 
 User = get_user_model()
@@ -18,8 +18,8 @@ def create_profile(sender, instance, created, **kwargs):
     if created:
         if instance.role == 'customer':
             CustomerProfile.objects.create(user=instance)
-        elif instance.role == 'driver':
-            DriverProfile.objects.create(user=instance)
+        elif instance.role == 'rider':
+            RiderProfile.objects.create(user=instance)
 
 # Password reset
 '''
