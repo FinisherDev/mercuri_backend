@@ -59,4 +59,5 @@ databases:
   - name: redis-db
     region: oregon
     plan: free
-    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
