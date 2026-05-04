@@ -3,14 +3,17 @@ from datetime import timedelta
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from .models import Order, Rider, Offer, OfferEvent
-from .serializers import OrderCreateSerializer, OrderSerializer, OfferSerializer
-from .tasks import dispatch_offers
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+
+from .models import Order, Rider, Offer, OfferEvent
+from .serializers import OrderCreateSerializer, OrderSerializer, OfferSerializer
+from .tasks import dispatch_offers
+from user.permissions import IsApprovedRider
+
 
 # Create your views here.
 
@@ -31,7 +34,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 @api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.IsAuthenticated, IsApprovedRider])
 def driver_accept(request, offer_id):
     """
         Driver accepts an order
@@ -79,7 +82,7 @@ def driver_accept(request, offer_id):
     return Response({"status" : "Order accepted", "order_id": str(order.id)})
 
 @api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.IsAuthenticated, IsApprovedRider])
 def customer_accept(request, offer_id):
     """
         Driver accepts an order
@@ -107,10 +110,10 @@ def customer_accept(request, offer_id):
 
         offer.accepted = True
         offer.save()
-        OfferEvent.objects.create(offer=offer, event='accepted', payload={"rider_accepted": str(rider.id)})
+        OfferEvent.objects.create(offer=offer, event='accepted', payload={"customer_accepted": str(rider.id)})
 
     channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(f'user_{order.customer.id}', {
+    async_to_sync(channel_layer.group_send)(f'user_{rider.user.id}', {
         "type": "offer_accepted",
         "offer": {
             "id": str(offer.id),
@@ -127,7 +130,7 @@ def customer_accept(request, offer_id):
     return Response({"status" : "Order accepted", "order_id": str(order.id)})
 
 @api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.IsAuthenticated, IsApprovedRider])
 def counter_offer(request, offer_id):
     offer = get_object_or_404(Offer, pk=offer_id)
     user = request.user
@@ -161,7 +164,7 @@ def counter_offer(request, offer_id):
     return Response(OfferSerializer(offer).data, status=201)
 
 @api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.IsAuthenticated, IsApprovedRider])
 def decline_offer(request, offer_id):
     rider = Rider.objects.get(user=request.user)
     offer = get_object_or_404(Offer, id=offer_id, rider=rider)

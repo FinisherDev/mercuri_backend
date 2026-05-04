@@ -9,6 +9,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
 
 from .managers import CustomUserManager
+#from .delivery.models import Rider
 
 ROLE_CHOICES = [
     ('customer', 'Customer'),
@@ -31,6 +32,18 @@ BANK_LIST = [
     ('wema', 'Wema Bank'),
     ('zenith', 'Zenith Bank'),
 ]
+VERIFICATION_STATUS = [
+    ('PENDING', 'Pending'),
+    ('ACCEPTED', 'Accepted'),
+    ('REJECTED', 'Rejected'),
+]
+VEHICLE_TYPES = [
+    ('CAR', 'Car'),
+    ('VAN', 'Van'),
+    ('TRICYCLE', 'Tricycle/Keke'),
+    ('MOTORCYCLE', 'Motorcycle'),
+    ('BICYCLE', 'Bicycle'),
+]# It's addition to frontend is to be determined.
 # Create your models here.
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
@@ -108,14 +121,40 @@ class RiderProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    
+    #Personal Info
+    date_of_birth = models.DateField()
+    nin = models.CharField(max_length=11, unique=True)
     middle_name = models.CharField("middle name", max_length=150, blank=True)
+
+    #Documents
     profile_photo = models.ImageField(upload_to='profile', blank=True)
     driver_license = models.ImageField(upload_to='license', blank=True)
+
+    #Bank Info
     bank_account = models.CharField(max_length=11)
     bank = models.CharField(max_length=20, choices=BANK_LIST)
+
+    #Vehicle Info
     plate_number = models.CharField(max_length=11)
     brand_of_vehicle = models.CharField(max_length=15)
     colour = models.CharField(max_length=15)
 
+    #Verification Info
+    verification_status = models.CharField(max_length=12, choices=VERIFICATION_STATUS)
+    rejectiion_reason = models.TextField(null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)#Need to add a way to timestamp when verification is completed
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return self.user.first_name
+    
+    @property
+    def is_fully_registered(self):
+        return self.verification_status == "APPROVED"
+    
+    @property
+    def can_accept_deliveries(self):
+        return self.is_fully_registered and self.user.is_active and self.user.rider.is_available

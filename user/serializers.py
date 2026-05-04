@@ -62,8 +62,35 @@ class RiderProfileSerializer(CustomUserSerializer):
     """
     class Meta:
         model = RiderProfile
-        fields = ('bio',)
+        fields = ('date_of_birth', 'nin', 'middle_name', 'profile_photo',
+                  'driver_license', 'bank_account', 'bank', 'plate_number',
+                  'brand_of_vehicle', 'color')
+        
+    def create(self, validated_data):
+        return RiderProfile.objects.create(**validated_data)
 
+class RiderProfileStatusSerializer(serializers.ModelSerializer):
+    is_fully_registered = serializers.ReadOnlyField()
+    can_accept_deliveries = serializers.ReadOnlyField()
+    merchant_registered = serializers.SerializerMethodField()
+    rider_profile_created = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RiderProfile
+        fields = (
+            'merchant_registered',
+            'rider_profile_created',
+            'verification_status',
+            'is_fully_registered',
+            'can_accept_deliveries',
+            'rejection_reason'
+        )
+
+    def get_merchant_registered(self, obj):
+        return True
+    
+    def get_driver_profile_created(self, obj):
+        return True
 
 class PasswordChangeSerializer(serializers.Serializer):
     """

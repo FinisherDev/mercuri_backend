@@ -34,7 +34,7 @@ def find_nearby_riders(pickup_latitude: float, pickup_longitude: float, limit: i
     return nearby_riders[:limit]
 
 # This function is meant to calculate the effective fare based on supply and demand metrics in real-time.
-# However initial testing and lack of an existing framework to hold such led to remaining unused for the meantime.
+# However initial testing and lack of an existing framework to hold such led to it remaining unused for the meantime.
 # Will be revisited with time.
 def calculate_simple_supply_demand_multiplier(pickup_lat: float, pickup_lon: float, radius_km: int=3):
     now = timezone.now()
@@ -110,6 +110,4 @@ def create_offers_for_order(order: Order) -> 'list[Offer]':
             },
         }
         async_to_sync(layer.group_send)(f"user_{rider.user.id}", payload)
-        print(f"Offer_{offer.id}")
-        print(f"user_{rider.user.id}")
     return offers

@@ -49,7 +49,16 @@ AGORA_APP_ID = "184507095fee47d880e282b490463620"
 AGORA_APP_CERTIFICATE = "9d75c98e945a4a6f8fdd94d40ca0fba8"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG')
+def strtobool(val):
+    """Convert string to boolean."""
+    val = val.lower()
+    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif val in ('n', 'no', 'f', 'false', 'off', '0', ''):
+        return False
+    else:
+        return False
+DEBUG = config('DEBUG', default="False", cast=strtobool)
 
 ALLOWED_HOSTS = ['*']#'10.10.30.187', '127.0.0.1', 'localhost']
 

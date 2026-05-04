@@ -1,13 +1,9 @@
-from django.shortcuts import redirect
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.generics import GenericAPIView, RetrieveUpdateAPIView, UpdateAPIView
+from rest_framework.generics import GenericAPIView, CreateAPIView, UpdateAPIView, RetrieveUpdateAPIView, RetrieveAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import get_user_model, login, logout
-from django.shortcuts import get_object_or_404
-
+from django.contrib.auth import get_user_model
 
 from . import serializers, models
 
@@ -97,17 +93,45 @@ class CustomerProfileAPIView(RetrieveUpdateAPIView):
         return self.request.user.profile
 
 
-class RiderProfileAPIView(RetrieveUpdateAPIView):
+class RiderProfileCreateAPIView(CreateAPIView):
     """
     Get, Update user avatar
     """
-    queryset = models.RiderProfile.objects.all()
+    serializer_class = serializers.RiderProfileSerializer
+    permission_classes = (IsAuthenticated,)
+    
+class RiderProfileUpdateView(UpdateAPIView):
     serializer_class = serializers.RiderProfileSerializer
     permission_classes = (IsAuthenticated,)
 
     def get_object(self):
-        return self.request.user.profile
+        return self.request.user.rider_profile
+    
+class RiderProfileStatusAPIView(RetrieveAPIView):
+    serializer_class = serializers.RiderProfileStatusSerializer
+    permission_classes = (IsAuthenticated,)
 
+    def retrieve(self, request, *args, **kwargs):
+        user = request.user
+
+        if user.is_rider() != 'rider':
+            return Response({
+                'rider_registered': False,
+                'rider_profile_created': False,
+                'is_fully_registered': False,
+                'can_accept_deliveries': False,
+                })
+
+        if not hasattr(user, 'rider_profile'):
+            return Redsponse({
+                'rider_registered': True,
+                'rider_profile_created': False,
+                'is_fully_registered': False,
+                'can_accept_deliveries': False,
+                })
+        
+        serializer = self.get_serializer(user.rider_profile)
+        return Response(serializer.data)
 
 class PasswordChangeAPIView(UpdateAPIView):
     """

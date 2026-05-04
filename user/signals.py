@@ -18,9 +18,6 @@ def create_profile(sender, instance, created, **kwargs):
     if created:
         if instance.role == 'customer':
             CustomerProfile.objects.create(user=instance)
-        elif instance.role == 'rider':
-            RiderProfile.objects.create(user=instance)
-
 # Password reset
 '''
 @receiver(reset_password_token_created)
