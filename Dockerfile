@@ -25,7 +25,7 @@ COPY . /code
 ENV SECRET_KEY "hUNqxdMWQNbrcquYicsD5U6upgM9Kn9jdmFJGJreUg1Ba6fXch"
 ENV DB_NAME "dummy"
 ENV DB_USER "dummy"
-ENV DB_PASSWORD "dummy"
+ENV DB_PASS "dummy"
 ENV DB_HOST "dummy"
 ENV DB_PORT "5432"
 ENV FIREBASE_CREDENTIALS "dummy"
