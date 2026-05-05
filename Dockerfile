@@ -33,4 +33,4 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-CMD ["/bin/sh", "-c", "daphne -b 0.0.0.0 -p $PORT mercuri.asgi:application"]
+CMD ["/bin/sh", "-c", "daphne -b 0.0.0.0 -p 8000 mercuri.asgi:application"]
