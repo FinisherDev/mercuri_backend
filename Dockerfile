@@ -28,7 +28,7 @@ ENV DB_USER "dummy"
 ENV DB_PASS "dummy"
 ENV DB_HOST "dummy"
 ENV DB_PORT "5432"
-ENV FIREBASE_CREDENTIALS "dummy"
+ENV FIREBASE_CREDENTIALS ""
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
