@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-import os, json
+import os, json, base64
 import firebase_admin
 import dj_database_url
 from decouple import config
@@ -21,7 +21,7 @@ from firebase_admin import credentials
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-firebase_creds_json = config('FIREBASE_CREDENTIALS_JSON', None)
+firebase_creds = config('FIREBASE_CREDENTIALS', None)
 firebase_creds_path = os.path.join(BASE_DIR, 'firebase_config.json')
 
 # Quick-start development settings - unsuitable for production
@@ -30,8 +30,8 @@ firebase_creds_path = os.path.join(BASE_DIR, 'firebase_config.json')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
 
-if firebase_creds_json:
-    FIREBASE_CREDENTIALS = json.loads(firebase_creds_json)
+if firebase_creds:
+    FIREBASE_CREDENTIALS = json.loads(base64.b64decode(firebase_creds).decode('utf-8'))
     cred = credentials.Certificate(FIREBASE_CREDENTIALS)
     firebase_admin.initialize_app(cred)
 elif os.path.exists(firebase_creds_path):
