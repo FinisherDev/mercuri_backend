@@ -45,8 +45,9 @@ FCM_DJANGO_SETTINGS = {
     "DELETE_INACTIVE_DEVICES": True,
 }
 
-AGORA_APP_ID = "184507095fee47d880e282b490463620"
-AGORA_APP_CERTIFICATE = "9d75c98e945a4a6f8fdd94d40ca0fba8"
+LIVEKIT_URL = "wss://mercuri-calls-i7fasrym.livekit.cloud"
+LIVEKIT_API_KEY = "APITSQRXAUr4CpC"
+LIVEKIT_API_SECRET = "9a74mqn3cfg2RXFBp272pykSAEznXCfJ5qgpzegv0vpA"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 def strtobool(val):

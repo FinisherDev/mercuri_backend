@@ -1,3 +1,4 @@
+import time, uuid
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -8,10 +9,9 @@ from django.utils import timezone
 from agora_token_builder import RtcTokenBuilder
 from django.conf import settings
 from django.db import models
-import time
-import uuid
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from livekit.api import AccessToken, VideoGrants
 
 from .models import Call
 from .serializers import CallSerializer
@@ -22,6 +22,31 @@ from .serializers import (ChatRoomSerializer, MessageSerializer,
 from .notifications import send_fcm_notification
 
 User = get_user_model()
+
+def _generate_livekit_token(room_name: str, participant_identity: str) -> str:
+    """
+    Generate a short-lived LiveKit access token for one participant in one room.
+ 
+    - `room_name`            → call.channel_name (unchanged field)
+    - `participant_identity` → str(user.id)  so the frontend can identify participants
+    """
+    token = AccessToken(
+        api_key=settings.LIVEKIT_API_KEY,
+        api_secret=settings.LIVEKIT_API_SECRET,
+    )
+    token.identity = participant_identity
+    token.name     = participant_identity          # display label in LiveKit dashboard
+    token.ttl      = 3600                          # 1 hour, same as old Agora tokens
+ 
+    token.add_grants(VideoGrants(
+        room_join=True,
+        room=room_name,
+        can_publish=True,       # publish mic audio
+        can_subscribe=True,     # hear the other participant
+        can_publish_data=False, # not needed for audio calls
+    ))
+ 
+    return token.to_jwt()
 
 class CallViewSet(viewsets.ModelViewSet):
     serializer_class = CallSerializer
@@ -209,73 +234,45 @@ class CallViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(calls, many=True)
         return Response(serializer.data)
 
-
-"""@api_view(['POST'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def generate_agora_token(request):
-    ""Generate Agora RTC token for authenticated user""
+def generate_livekit_token(request):
+    """
+    Generate a LiveKit access token for the authenticated user.
+ 
+    Replaces the old /api/agora/token/ endpoint.
+    Request body:  { "call_id": <int> }
+    Response:      { "token": "...", "serverUrl": "...", "roomName": "...", "participantIdentity": "..." }
+ 
+    The frontend connects directly to LiveKit using these three values.
+    No appId or uid needed — LiveKit uses string identities instead.
+    """
     call_id = request.data.get('call_id')
-    
+ 
     if not call_id:
-        return Response(
-            {'error': 'call_id is required'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
+        return Response({'error': 'call_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+ 
     try:
         call = Call.objects.get(id=call_id)
-        
-        # Verify user is part of the call
+ 
         if request.user not in [call.caller, call.receiver]:
-            return Response(
-                {'error': 'You are not part of this call'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        channel_name = call.channel_name
-        uid = request.user.id
-        
-        # Token expiration time (1 hour)
-        expiration_time = int(time.time()) + 3600
-        
-        # Generate token
-        token = RtcTokenBuilder.buildTokenWithUid(
-            settings.AGORA_APP_ID,
-            settings.AGORA_APP_CERTIFICATE,
-            channel_name,
-            uid,
-            1,  # Publisher role
-            expiration_time
-        )
-        response = Response({
-            'token': token,
-            'appId': settings.AGORA_APP_ID,
-            'channelName': channel_name,
-            'uid': uid,
-            'expiration': expiration_time
-        })
-        print(response)
-        
+            return Response({'error': 'You are not part of this call'}, status=status.HTTP_403_FORBIDDEN)
+ 
+        participant_identity = str(request.user.id)
+        token = _generate_livekit_token(call.channel_name, participant_identity)
+ 
         return Response({
             'token': token,
-            'appId': settings.AGORA_APP_ID,
-            'channelName': channel_name,
-            'uid': uid,
-            'expiration': expiration_time
+            'serverUrl': settings.LIVEKIT_URL,
+            'roomName': call.channel_name,
+            'participantIdentity': participant_identity,
         })
-        
+ 
     except Call.DoesNotExist:
-        return Response(
-            {'error': 'Call not found'}, 
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({'error': 'Call not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response(
-            {'error': str(e)}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )"""
-    
-
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+  
 class ChatRoomViewSet(viewsets.ModelViewSet):
     serializer_class = ChatRoomSerializer
     permission_classes = [IsAuthenticated]

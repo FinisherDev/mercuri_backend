@@ -11,6 +11,6 @@ router.register(r'fcm/devices', views.FCMDeviceViewSet, basename='fcmdevice')
 
 urlpatterns = [
     path('comms/', include(router.urls)),
-    #path('agora/token/', views.generate_agora_token, name='generate_agora_token'),
+    path('livekit/token/', views.generate_livekit_token, name='generate_agora_token'),
     path('users/search/', views.search_users, name='search_users'),
 ]
