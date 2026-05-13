@@ -57,6 +57,7 @@ hyperlink==21.0.0
 idna==3.10
 incremental==24.7.2
 kombu==5.5.4
+livekit-api
 locust-cloud==1.24.2
 msgpack==1.1.0
 packaging==25.0
